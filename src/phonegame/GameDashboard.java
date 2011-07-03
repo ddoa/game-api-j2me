@@ -8,7 +8,8 @@ import javax.microedition.lcdui.*;
 import phonegame.utils.Tools;
 
 /**
- * This class visually represents the "dashboard" in you game. You can use this dashboard to display all sorts of status
+ * This class visually represents the "dashboard" in you game. 
+ * You can use this dashboard to display all sorts of status
  * information like, for example: the amount of health, power, etc.
  * 
  * @author Tim Prijn, Richard Kettelerij & Paul Bergervoet
@@ -56,9 +57,12 @@ public class GameDashboard
     /**
      * Adds a new display-item to the dashboard. A display-item consists of a label 
      * (the name of the item) and a value. Both are Strings. 
-     * <br/>
+     * <br />
      * For example, to show points, make the label "Points" and the value at start "0".
      * Later on, you can change the value of a display-item with a given name.
+     * <br />
+     * You can add several 'items' on the dashboard. They will appear in line, ususally
+     * in the order in which you added them.
      * 
      * @param label
      *                the label of this item, try to keep this short (e.g use LP instead of Lifepoints).

@@ -20,7 +20,28 @@ public abstract class GamePlayer extends MoveableGameItem
      * Flag will be set at player move
      */
     private boolean hasMoved;
+    
+    /**
+     * Flag indicating if there is a key event in this cycle
+     */
+    private boolean keyPresent;
+    
+    /**
+     * Flag indicating if the key is the result of a key repeat
+     */
+    private boolean keyRepeated;
 
+    /**
+     * Set the two key vars, every cycle!
+     * 
+     * @param key -- obvious
+     * @param repeat
+     */
+    final void setKeyVars(boolean key, boolean repeat)
+    {
+    	keyPresent = key;
+    	keyRepeated = repeat;
+    }
 
     /**
      * Ask if player has moved.
@@ -48,9 +69,9 @@ public abstract class GamePlayer extends MoveableGameItem
      * <br/>
      * <em>Note:</em> If you use the method setPosition(x, y) there will be no collision detection.
      * Also, there is no collision detection when you call MovePlayer outside the key handling methods!
-     * Collision detection is expensive and can only be done at a few specific moments:
+     * Collision detection is time consuming and can only be done at a few specific moments:
      * (1) When any item that has speed is moved by the GameEngine and (2) when a key is pressed 
-     * and the Player is moved.
+     * and the Player is moved by this method.
      * 
      * @param x the new x-position of the player
      * @param y the new y-position of the player
@@ -65,6 +86,30 @@ public abstract class GamePlayer extends MoveableGameItem
         hasMoved = true;
     }
     
+    /**
+     * Ask if the player receives a key action in this cycle of the game loop.
+     * 
+     * @return true if a key has been pressed (or held), false otherwise
+     */
+    public boolean hasKey()
+    {
+    	return keyPresent;
+    }
+    
+    /**
+     * Ask if the key action follows from a key repeat.
+     * <br />
+     * Example: if the (human) player presses the up-key and holds it, there will
+     * be a lot of calls to the moveUp-method. The first time, this method will
+     * return 'false', all the other calls this method will return 'true'.
+     * 
+     * @return true if the key action is caused by the (human) player holding a key,
+     * false otherwise
+     */
+    public boolean isKeyRepeat()
+    {
+    	return keyRepeated;
+    }
     /**
      * Handle the UP key event. On a phone, this event is usually (but not always!) mapped to key 2 or a special
      * 'softbutton'

@@ -22,16 +22,6 @@ import phonegame.utils.Tools;
  */
 public abstract class MoveableGameItem extends GameItem
 {
-   /**
-     * Utility constant: pi/2
-     */
-    private static final double HALF_PI = Math.PI/2;
-
-    /**
-     * Utility constant: 2*pi
-     */
-    private static final double TWOPI = 2*Math.PI;
-
     /**
      * Speed of the item in pixels. This is zero at the start.
      * <p/>
@@ -56,12 +46,9 @@ public abstract class MoveableGameItem extends GameItem
     private double cosdir = 1;
 
     /**
-     * Boolean indicating if the object is moving. Not the speed!
-     */
-    private boolean move = false;
-
-    /**
-     * Boolean indicating if the object is moving. Not the speed!
+     * Boolean indicating if collision detection must be performed.
+     * 
+     * @see setCollisionDetection(), hasCollisionDetection()
      */
     private boolean collisionDetection = true;
 
@@ -578,19 +565,31 @@ public abstract class MoveableGameItem extends GameItem
     }
 
     /**
-     * Start moving this item.
+     * Indicate that an item's speed has been set to a speed greater then zero
+     * 
+     * @deprecated as of phonegame V3.2
+     * In older versions of the phonegame engine this improved the efficiency.
+     * Non-moving items can be handled quicker: no movement, no collision.
+     * This is not needed anymore. The method is still here so older games will
+     * compile and run, but it does nothing.
      */
     public void startMoving()
     {
-        move = true;
+        // move = true;
     }
 
     /**
      * Stop moving this item.
+     * 
+     * @deprecated as of phonegame V3.2
+     * In older versions of the phonegame engine this improved the efficiency.
+     * Non-moving items can be handled quicker: no movement, no collision.
+     * This is not needed anymore. The method is still here so older games will
+     * compile and run, but it does nothing.
      */
     public void stopMoving()
     {
-        move = false;
+        // move = false;
     }
 
     /**
@@ -598,7 +597,7 @@ public abstract class MoveableGameItem extends GameItem
      */
     public final void reverseHorizontalDirection()
     {
-        cosdir = -cosdir; // assumption: - is ok for FP-numbers!
+        cosdir = -cosdir; 
     }
 
     /**
@@ -613,20 +612,15 @@ public abstract class MoveableGameItem extends GameItem
      * Move a MoveableGameItem.
      * This method is executed with every cycle of the game loop. It moves
      * the GameItem to its new position (according to speed and direction).
-     * Note that you have to call startMoving() first, or the Iten won't move at all.
      */
     
     final void move()
     {
-        if (move)
+    	prevX = getX();
+        prevY = getY();
+        if (speedInPixels > 0)
         {
-            prevX = getX();
-            prevY = getY();
-            if (speedInPixels > 0)
-            {
-                speedInPixels = friction * speedInPixels;
-            }
-
+            speedInPixels = friction * speedInPixels;
             double dx = cosdir * speedInPixels;
             double dy = sindir * speedInPixels;
             setX(getX() + Tools.round(dx));
@@ -636,12 +630,17 @@ public abstract class MoveableGameItem extends GameItem
 
     /**
      * This method is triggered when an collision between a MoveableGameItem (i.e. the player) and some other gameitem
-     * (i.e. a moveable enemy or a static wall) occurs.
+     * (i.e. a moveable enemy or power-up) occurs.<br />
+     * When a collision occurs between a MoveableGameItem and a simple GameItem (that is not a MoveableGameItem)
+     * only the MoveableGameItem will get the event. When a collision occurs between two MoveableGameItems, both
+     * will get the event. In this case you can choose which of the two will handle the event. <br />
+     * When the colliding items stay in the same place, there will be another collision in the next step of 
+     * the game loop.
      * <p>
      * <b>NOTE: </b> <br/>Just the collision is detected, there is no direction or collision position. Therefore you
      * can't bounce properly.
      * <p>
-     * <b>NOTE 2: </b> <br/>JCollisions between items are detected always, that means that invisible items can also 
+     * <b>NOTE 2: </b> <br/>Collisions between items are detected always, that means that invisible items can also 
      * have collisions. 
      * 
      * @param collidedItem
@@ -656,12 +655,25 @@ public abstract class MoveableGameItem extends GameItem
     /**
      * This method is triggered when an collision between a MoveableGameItem (i.e. the player) and a tile (a block in
      * the environment map) or row/column of tiles occurs. Please note that only MoveableGameItems can receive this type
-     * of events. <p/>The tilePattern parameter tells you what tile types were hit in one time. In the bit pattern bit
-     * n (counting from the back) is switched on if a tile of type n has been hit. So if the tilePattern is 9 (binary:
-     * 1001), tile types 4 and 1 have been hit. Use the bitwise operators on ints to test. <p/><b>NOTE: </b> <br/>In a
-     * single move many tile collisions can occur. Therefore you can receive several calls of this method on just one
-     * move. Just use the standard handing methods mentioned below to handle this event. If you want to jump at such a
-     * collision, set a Timer for the next turn, and jump then.
+     * of events. 
+     * <br />
+     * Also note that a collision only occurs when a MoveableGameItem enters the area of a tile. 
+     * The game engine detects the <i>passing of the border</i> of a tile.
+     * When the Item already is on top of the tile, there will be no collision.
+     * Also, if the MoveableGameItem stays in the same place, there will be <em>no</em> collision in the next
+     * step of the game loop. <br />
+     * There are three standard methods to deal with tile collisions. You can use <i>undoMove()</i> to put the 
+     * MoveableGameItem back in its origininal position, you can use <i>bounce(horizontal, position)</i> to
+     * bounce like a tennis ball or you can use <i>moveUpto(horizontal, position)</i> to undo part of the move,
+     * the item just moves to the edge of the tile, 'move to contact'. 
+     * <p />
+     * The tilePattern parameter tells you what tile types were hit in one time. In the bit pattern bit <i>n</i>
+     * (counting from the back) is switched on if a tile of type n has been hit. So if the tilePattern is 9 (binary:
+     * 1001), tile types 4 and 1 have been hit. Use the bitwise operators on ints to test. 
+     * <br /><b>NOTE: </b>In a single move many tile collisions can occur, especially at high speeds. 
+     * Therefore you can receive several calls of this method on just one move. 
+     * Just use the standard handing methods mentioned below to handle this event.
+     * If you want to jump at a tile collision, set a Timer for the next turn, and jump then.
      * 
      * @param tilePattern
      *                bit pattern indicating the tile types you have run into.
@@ -682,7 +694,6 @@ public abstract class MoveableGameItem extends GameItem
     
     /**
      * This method is executed every time the gameitem moves outside the world.
-     * (as defined in the minX, minY, maxX and maxY properties of the GameEngine)
      * <br/>
      * By default, nothing is done. If you want to take action when a GameItem
      * moves outside the world, then you must override this method. 

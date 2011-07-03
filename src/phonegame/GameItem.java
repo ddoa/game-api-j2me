@@ -82,8 +82,11 @@ public abstract class GameItem
 
     /**
      * Get the state of the GameItem.
+     * <br />
+     * The state of an item is normally only relevant for the GameEngine itself.
+     * Normally you only deal with ACTIVE items.
      * 
-     * @return state, ACTIVE or DELETED
+     * @return state, this can currently be either GameItem.ACTIVE or GameItem.DELETED
      */
     public final int getGiState()
     {
@@ -118,7 +121,7 @@ public abstract class GameItem
      * @param path
      *                relative location to the image file
      * @throws GameException
-     *                 if the specified image is not found at the given path
+     *                if the specified image is not found at the given path
      */
     public void setImage(String path) throws GameException
     {

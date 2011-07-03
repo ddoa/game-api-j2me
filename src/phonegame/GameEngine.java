@@ -211,7 +211,7 @@ public abstract class GameEngine extends MIDlet implements Runnable
             cycleStartTime = System.currentTimeMillis();
             try
             {	// execute the various game operations
-                // mobeItems en playerAction  will check tile collisions: on move only!!!
+                // moveItems en playerAction will check tile collisions: on move only!!!
             	moveItems();
             	window.handleKey();
             	detectItemCollisions(); 
@@ -264,8 +264,10 @@ public abstract class GameEngine extends MIDlet implements Runnable
     public void stopGame()
     {
         gameLoop = null;
+        // stop key repeats (bug fix: keys appeared out of nowhere after stop-start)
+        window.clearKey();
         // also clear gamePaused: if menuAction 'pause' leads to stopGame(),
-        // you don't want the game to start again after the menu is removed!!
+        // you don't want a stopped game to start again after an incoming call is ended!!
         gameSuspended = false;
     }
     
@@ -838,12 +840,15 @@ public abstract class GameEngine extends MIDlet implements Runnable
      * using the tiles in this list.
      * <br/>
      * All tiles must have equal sizes, to be specified in this method.
+     * <br />
+     * There is a maximum to the number of tiles you can use. This maximum is equal to the number
+     * of bits in an <i>int</i>. This number depends on the platform, but on most devices it is 32.
      * 
      * @param imagePaths
      *                relative path(s) to the square tile images. Please not that the sequence of the images in this array
      *                define the numbers that you can use in your map (so the first image is identified with a 1, the second
      *                with a 2, etc).
-    * @param tileWidth
+     * @param tileWidth
      *                the width of the tile images that are used (usually 16 or 10 pixels)
      * @param tileHeight
      *                the height of the tile images that are used (usually 16 or 10 pixels)
@@ -1084,7 +1089,9 @@ public abstract class GameEngine extends MIDlet implements Runnable
     }
     
     /**
-     * Executed when the application is started.
+     * Executed when the application is started. Don't use this method yourself,
+     * it is intended for use by the phone device itself, for example to restart
+     * the game after an incoming call. Use startGame() instead.
      * 
      * @see javax.microedition.midlet.MIDlet#startApp()
      */
@@ -1099,7 +1106,9 @@ public abstract class GameEngine extends MIDlet implements Runnable
     }
 
     /**
-     * Executed when the application is paused (e.g when receiving an incoming call).
+     * Executed when the application is paused. Don't use this method yourself,
+     * it is intended for use by the phone device itself, for example to pause
+     * the game for an incoming call. Use stopGame() instead.
      * 
      * @see javax.microedition.midlet.MIDlet#pauseApp()
      */
@@ -1111,6 +1120,9 @@ public abstract class GameEngine extends MIDlet implements Runnable
 
     /**
      * Executed when the application is terminated by the MIDP device.
+     * Don't use this method yourself,
+     * it is intended for use by the phone device itself. 
+     * Use exitGame() instead.
      * 
      * @see javax.microedition.midlet.MIDlet#destroyApp(boolean)
      */
@@ -1241,60 +1253,50 @@ public abstract class GameEngine extends MIDlet implements Runnable
          * 
          * @param gameAction
          *                the requested action
-         * @throws GameException
-         *                 if the player is not assigned
          */
-        public void performAction(int gameAction) throws GameException
-        {
-            if (player != null)
-            {
-                switch (gameAction)
-                {
-                case UP:
-                    player.moveUp();
-                    break;
-                case DOWN:
-                    player.moveDown();
-                    break;
-                case LEFT:
-                    player.moveLeft();
-                    break;
-                case RIGHT:
-                    player.moveRight();
-                    break;
-                case FIRE:
-                    player.fire();
-                    break;
-                case GAME_A:
-                    player.pressedButtonA();
-                    break;
-                case GAME_B:
-                    player.pressedButtonB();
-                    break;
-                case GAME_C:
-                    player.pressedButtonC();
-                    break;
-                case GAME_D:
-                    player.pressedButtonD();
-                    break;
-                }
-                if ( player.getMoved() ) 
-                { 	
-                    updateViewPort = true;
-                    // System.out.println("Player moved, detect collisions");
-                    // window.checkForItemCollisions(player);
-                    if ( player.hasCollisionDetection() )
-                	{	
-                	    window.checkForTileCollisions(player);
-                	}
-                	player.clearMoved();
-                }
-                 
-            } else
-            {
-                throw new GameException("No GamePlayer present, cannot respond to keyboard events");
-            }
-        }
+		private void performAction(int gameAction) {
+			switch (gameAction)
+			{
+			case UP:
+				player.moveUp();
+				break;
+			case DOWN:
+				player.moveDown();
+				break;
+			case LEFT:
+				player.moveLeft();
+				break;
+			case RIGHT:
+				player.moveRight();
+				break;
+			case FIRE:
+				player.fire();
+				break;
+			case GAME_A:
+				player.pressedButtonA();
+				break;
+			case GAME_B:
+				player.pressedButtonB();
+				break;
+			case GAME_C:
+				player.pressedButtonC();
+				break;
+			case GAME_D:
+				player.pressedButtonD();
+				break;
+			}
+			if (player.getMoved())
+			{
+				updateViewPort = true;
+				// System.out.println("Player moved, detect collisions");
+				// window.checkForItemCollisions(player);
+				if (player.hasCollisionDetection())
+				{
+					window.checkForTileCollisions(player);
+				}
+				player.clearMoved();
+			}
+		}
 
         /**
          * Is called when a key is pressed. 
@@ -1323,12 +1325,29 @@ public abstract class GameEngine extends MIDlet implements Runnable
             keyHeld = false;
         }
         
+        /**
+         * Clears the key-booleans. Method stopGame() calls this to make sure
+         * there will be no key events after resume game.
+         */
+        private void clearKey()
+        {
+            keyHeld = false;
+            newKey = false;
+        }
+        
         private void handleKey() throws GameException
         {
-            if ( newKey || keyHeld )
+            if (player != null)
             {
-                performAction(spelAction);
-                newKey = false;
+            	player.setKeyVars( (newKey || keyHeld), (keyHeld && !newKey));
+            	if ( newKey || keyHeld )
+            	{
+            		performAction(spelAction);
+            		newKey = false;
+            	}
+            } else
+            {
+                throw new GameException("No GamePlayer present, cannot respond to keyboard events");
             }
         }
 
